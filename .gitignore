@@ -1,3 +1,9 @@
+#ignore the data folder
+data/*
+
+#ignore .DS_Store
+.DS_Store
+
 # use glob syntax.
 syntax: glob
 *.ser
