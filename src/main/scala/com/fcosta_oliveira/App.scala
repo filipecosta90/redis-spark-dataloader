@@ -71,6 +71,7 @@ object App {
     }
     val df = spark.createDataFrame(rdd, schema()).cache()
     df.count()
+
     time {
       df.write.format("org.apache.spark.sql.redis").option("table", tableName).save()
     }
@@ -78,7 +79,7 @@ object App {
       spark.read
         .format("org.apache.spark.sql.redis")
         .option("table", tableName)
-        .load()
+        .load().count()
     }
   }
 
