@@ -1,50 +1,80 @@
 package com.fcosta_oliveira
 
+import java.util.UUID
 
-import java.io.{File, FileWriter, PrintWriter}
-import java.time.{Duration => JDuration}
+import ch.qos.logback.classic.{Level, Logger}
+import org.apache.spark.sql.types.{StructField, StructType, _}
+import org.apache.spark.sql.{Row, SparkSession}
+import org.slf4j.LoggerFactory
 
-import org.apache.spark.sql.SparkSession
+import scala.util.Random
 
-
-/**
+/*
   * @author ${user.name}
   */
 object App {
 
-  val benchmarkReportDir = new File("target/reports/benchmarks/")
 
   def main(args: Array[String]) {
 
-    val recordName = "data/10K_records_100cols_36_bytes.csv"
-    val tableName = "10K_records_100cols_36_bytes"
-    benchmarkReportDir.mkdirs()
+    LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).
+      asInstanceOf[Logger].setLevel(Level.INFO)
 
+    val rowsNum = 1000 * 1000
+    val partitionsNum = 4
+    val tableName = "1M"
+
+    def schema(): StructType = {
+      val stringColumns = (1 to 36).map(i => StructField(s"str$i", StringType)).toArray
+
+      StructType(Array(
+        StructField("id", StringType),
+        StructField("int", IntegerType),
+        StructField("float", FloatType),
+        StructField("double", DoubleType)
+      ) ++ stringColumns)
+    }
+
+    def time[T](f: => T): T = {
+      val start = System.currentTimeMillis()
+      val r = f
+      val end = System.currentTimeMillis()
+      println(s"took ${end - start} ms")
+      r
+
+    }
+    // Distribute a local Scala collection to form an RDD.
 
     val spark = SparkSession
       .builder()
-      .appName("myApp")
+      .appName("spark-redis-profiling")
       .master("local[*]")
       .config("spark.redis.host", "localhost")
       .config("spark.redis.port", "6379")
+      .config("spark.dynamicAllocation.enabled", false)
       .getOrCreate()
 
-    //load
+    val rdd = spark.sparkContext.parallelize(1 to partitionsNum, partitionsNum).mapPartitions { _ =>
+      def generateRow() = {
+        def genStr = UUID.randomUUID().toString
 
-    redis_load(recordName, spark)
+        def genInt = Random.nextInt()
 
-    //write
-    redis_write(recordName, tableName, spark)
+        def genDouble = Random.nextDouble()
 
+        def genFloat = Random.nextFloat()
 
-    //read after write
-    redis_read(recordName, tableName, spark)
+        Row.fromSeq(Seq(genStr, genInt, genFloat, genDouble) ++ (1 to 36).map(_ => genStr))
+      }
 
-  }
-
-  private def redis_read(recordName: String, tableName: String, spark: SparkSession) = {
-    val df = spark.read.format("csv").option("header", "true").load(recordName)
-    time(s"Read") {
+      Stream.fill(rowsNum / partitionsNum)(generateRow()).iterator
+    }
+    val df = spark.createDataFrame(rdd, schema()).cache()
+    df.count()
+    time {
+      df.write.format("org.apache.spark.sql.redis").option("table", tableName).save()
+    }
+    time {
       spark.read
         .format("org.apache.spark.sql.redis")
         .option("table", tableName)
@@ -52,33 +82,11 @@ object App {
     }
   }
 
-  private def redis_load(recordName: String, spark: SparkSession) = {
-    time(s"Load") {
-      val df = spark.read.format("csv").option("header", "true").load(recordName)
-    }
-  }
-
-  private def redis_write(recordName: String, tableName: String, spark: SparkSession) = {
-    val df = spark.read.format("csv").option("header", "true").load(recordName)
-    time(s"Write") {
-      df.write
-        .format("org.apache.spark.sql.redis")
-        .option("table", tableName)
-        .mode(org.apache.spark.sql.SaveMode.Overwrite)
-        .save()
-    }
-  }
-
-  def time[R](tag: String)(block: => R): R = {
-    val t0 = System.nanoTime()
-    val result = block // call-by-name
-    val t1 = System.nanoTime()
-    new PrintWriter(new FileWriter(s"$benchmarkReportDir/results.txt", true)) {
-      // scalastyle:off
-      //Tag,  Duration representing a number of nanoseconds.
-      this.println(s"$tag, ${JDuration.ofNanos(t1 - t0)}")
-      close()
-    }
-    result
+  def time[T](f: => T): T = {
+    val start = System.currentTimeMillis()
+    val r = f
+    val end = System.currentTimeMillis()
+    println(s"took ${end - start} ms")
+    r
   }
 }
