@@ -3,6 +3,7 @@ package com.fcosta_oliveira
 import java.util.UUID
 
 import ch.qos.logback.classic.{Level, Logger}
+import org.apache.spark.sql.redis.{SqlOptionLogInfoVerbose, SqlOptionModel, SqlOptionModelBlock}
 import org.apache.spark.sql.types.{StructField, StructType, _}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.slf4j.LoggerFactory
@@ -48,7 +49,11 @@ object App {
     val df = spark.read.parquet("data/records_rec_100000_col_400_dsize_36.parquet")
 
     time {
-      df.write.format("org.apache.spark.sql.redis").option("table", tableName).save()
+      df.write.format("org.apache.spark.sql.redis")
+        .option("table", tableName)
+        .option(SqlOptionModel, SqlOptionModelBlock)
+        .option(SqlOptionLogInfoVerbose, true)
+        .save()
     }
     time {
       spark.read
