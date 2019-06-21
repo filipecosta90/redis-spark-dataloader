@@ -54,6 +54,21 @@ object App {
       .config("spark.dynamicAllocation.enabled", false)
       .getOrCreate()
 
+    //val df: DataFrame = create_df(rowsNum, partitionsNum, schema _, spark )
+    val df = spark.read.parquet("data/records_rec_100000_col_400_dsize_36.parquet")
+
+    time {
+      df.write.format("org.apache.spark.sql.redis").option("table", tableName).save()
+    }
+    time {
+      spark.read
+        .format("org.apache.spark.sql.redis")
+        .option("table", tableName)
+        .load().count()
+    }
+  }
+
+  private def create_df(rowsNum: Int,partitionsNum: Int, schema: () => StructType, spark: SparkSession) = {
     val rdd = spark.sparkContext.parallelize(1 to partitionsNum, partitionsNum).mapPartitions { _ =>
       def generateRow() = {
         def genStr = UUID.randomUUID().toString
@@ -71,16 +86,7 @@ object App {
     }
     val df = spark.createDataFrame(rdd, schema()).cache()
     df.count()
-
-    time {
-      df.write.format("org.apache.spark.sql.redis").option("table", tableName).save()
-    }
-    time {
-      spark.read
-        .format("org.apache.spark.sql.redis")
-        .option("table", tableName)
-        .load().count()
-    }
+    df
   }
 
   def time[T](f: => T): T = {
