@@ -13,36 +13,26 @@ import scala.util.Random
   * @author ${user.name}
   */
 object App {
+  def schema(): StructType = {
+    val stringColumns = (1 to 36).map(i => StructField(s"str$i", StringType)).toArray
 
+    StructType(Array(
+      StructField("id", StringType),
+      StructField("int", IntegerType),
+      StructField("float", FloatType),
+      StructField("double", DoubleType)
+    ) ++ stringColumns)
+  }
 
   def main(args: Array[String]) {
 
     LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).
       asInstanceOf[Logger].setLevel(Level.INFO)
 
-    val rowsNum = 1000 * 1000
+    val rowsNum = 1000 * 100
     val partitionsNum = 4
-    val tableName = "1M"
+    val tableName = "100K"
 
-    def schema(): StructType = {
-      val stringColumns = (1 to 36).map(i => StructField(s"str$i", StringType)).toArray
-
-      StructType(Array(
-        StructField("id", StringType),
-        StructField("int", IntegerType),
-        StructField("float", FloatType),
-        StructField("double", DoubleType)
-      ) ++ stringColumns)
-    }
-
-    def time[T](f: => T): T = {
-      val start = System.currentTimeMillis()
-      val r = f
-      val end = System.currentTimeMillis()
-      println(s"took ${end - start} ms")
-      r
-
-    }
     // Distribute a local Scala collection to form an RDD.
 
     val spark = SparkSession
