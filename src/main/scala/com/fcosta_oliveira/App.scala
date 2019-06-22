@@ -46,6 +46,8 @@ object App {
       .getOrCreate()
 
     //val df: DataFrame = create_df(rowsNum, partitionsNum, schema _, spark )
+    // used https://github.com/filipecosta90/spark-redis-datagen to generate records_rec_100000_col_400_dsize_36.parquet
+    // python datagen.py --format parquet --records 100000
     val df = spark.read.parquet("data/records_rec_100000_col_400_dsize_36.parquet")
 
     time {
@@ -59,7 +61,7 @@ object App {
       spark.read
         .format("org.apache.spark.sql.redis")
         .option("table", tableName)
-        .load().count()
+        .load().foreach{_=>}
     }
   }
 
