@@ -43,10 +43,12 @@ object App {
       .config("spark.redis.host", "localhost")
       .config("spark.redis.port", "6379")
       .config("spark.dynamicAllocation.enabled", false)
-      //.config("spark.kryoserializer.buffer.mb","24")
+      // Class to use for serializing objects that will be sent over the network or need to be cached in serialized form.
+      .config("spark.serializer","org.apache.spark.serializer.KryoSerializer")
+      // Initial size of Kryo's serialization buffer, in KiB unless otherwise specified.
+      // Note that there will be one buffer per core on each worker.
+      .config("spark.kryoserializer.buffer","24m")
       .getOrCreate()
-
-
 
     //val df: DataFrame = create_df(rowsNum, partitionsNum, schema _, spark )
     // used https://github.com/filipecosta90/spark-redis-datagen to generate records_rec_100000_col_400_dsize_36.parquet
@@ -60,13 +62,15 @@ object App {
         .option(SqlOptionLogInfoVerbose, true)
         .save()
     }
-    /*
+
     time {
       spark.read
         .format("org.apache.spark.sql.redis")
         .option("table", tableName)
+        .option(SqlOptionModel, SqlOptionModelBlock)
+        .option(SqlOptionLogInfoVerbose, true)
         .load().foreach{_=>}
-    }*/
+    }
   }
 
   private def create_df(rowsNum: Int,partitionsNum: Int, schema: () => StructType, spark: SparkSession) = {
