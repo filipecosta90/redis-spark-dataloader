@@ -43,7 +43,10 @@ object App {
       .config("spark.redis.host", "localhost")
       .config("spark.redis.port", "6379")
       .config("spark.dynamicAllocation.enabled", false)
+      //.config("spark.kryoserializer.buffer.mb","24")
       .getOrCreate()
+
+
 
     //val df: DataFrame = create_df(rowsNum, partitionsNum, schema _, spark )
     // used https://github.com/filipecosta90/spark-redis-datagen to generate records_rec_100000_col_400_dsize_36.parquet
@@ -57,12 +60,13 @@ object App {
         .option(SqlOptionLogInfoVerbose, true)
         .save()
     }
+    /*
     time {
       spark.read
         .format("org.apache.spark.sql.redis")
         .option("table", tableName)
         .load().foreach{_=>}
-    }
+    }*/
   }
 
   private def create_df(rowsNum: Int,partitionsNum: Int, schema: () => StructType, spark: SparkSession) = {
