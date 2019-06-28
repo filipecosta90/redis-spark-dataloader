@@ -1,38 +1,20 @@
 package com.fcosta_oliveira
 
-import java.util.UUID
-
-import ch.qos.logback.classic.{Level, Logger}
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.redis.{SqlOptionLogInfoVerbose, SqlOptionModel, SqlOptionModelBlock}
-import org.apache.spark.sql.types.{StructField, StructType, _}
-import org.apache.spark.sql.{Row, SparkSession}
-import org.slf4j.LoggerFactory
 import redis.clients.jedis.{JedisPool, JedisPoolConfig}
-
-import scala.util.Random
 
 /*
   * @author ${user.name}
   */
 object App {
-  def schema(): StructType = {
-    val stringColumns = (1 to 36).map(i => StructField(s"str$i", StringType)).toArray
-
-    StructType(Array(
-      StructField("id", StringType),
-      StructField("int", IntegerType),
-      StructField("float", FloatType),
-      StructField("double", DoubleType)
-    ) ++ stringColumns)
-  }
 
   def main(args: Array[String]) {
 
-    LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).
-      asInstanceOf[Logger].setLevel(Level.INFO)
+    Logger.getLogger("org").setLevel(Level.INFO)
+    Logger.getLogger("akka").setLevel(Level.INFO)
 
-    val rowsNum = 1000 * 100
-    val partitionsNum = 4
     val tableName = "100K"
 
     // Distribute a local Scala collection to form an RDD.
@@ -61,11 +43,8 @@ object App {
       .config("spark.kryoserializer.buffer","2m")
       .getOrCreate()
 
-    //val df: DataFrame = create_df(rowsNum, partitionsNum, schema _, spark )
-    // used https://github.com/filipecosta90/spark-redis-datagen to generate records_rec_100000_col_400_dsize_36.parquet
-    // python datagen.py --format parquet --records 100000
-    val df = spark.read.parquet("data/records_rec_100000_col_400_dsize_36.parquet")
-
+    // run DataGen.scala first to generate data
+    val df = spark.read.parquet("data/records_rec_100000_col_400_dsize_36")
 
     time {
       df.write.format("org.apache.spark.sql.redis")
@@ -83,27 +62,6 @@ object App {
 //        .option(SqlOptionLogInfoVerbose, true)
 //        .load().foreach { _ => }
 //    }
-  }
-
-  private def create_df(rowsNum: Int,partitionsNum: Int, schema: () => StructType, spark: SparkSession) = {
-    val rdd = spark.sparkContext.parallelize(1 to partitionsNum, partitionsNum).mapPartitions { _ =>
-      def generateRow() = {
-        def genStr = UUID.randomUUID().toString
-
-        def genInt = Random.nextInt()
-
-        def genDouble = Random.nextDouble()
-
-        def genFloat = Random.nextFloat()
-
-        Row.fromSeq(Seq(genStr, genInt, genFloat, genDouble) ++ (1 to 36).map(_ => genStr))
-      }
-
-      Stream.fill(rowsNum / partitionsNum)(generateRow()).iterator
-    }
-    val df = spark.createDataFrame(rdd, schema()).cache()
-    df.count()
-    df
   }
 
   def time[T](f: => T): T = {
