@@ -19,8 +19,8 @@ object DataGen {
     val rowsNum = 1000 * 100
     val dataSize = 36
     val columns = 400
-    val partitionsNum = 4 // only affect the number of cores used (make sure that rowsNum % partitionsNum = 0)
-    val outputFile = s"records_rec_${rowsNum}_col_${columns}_dsize_$dataSize"
+    val partitionsNum = 12 // only affect the number of cores used (make sure that rowsNum % partitionsNum = 0)
+    val outputFile = s"records_rec_${rowsNum}_col_${columns}_dsize_${dataSize}_partitions_${partitionsNum}"
     val outputPath = "data/"
 
     val spark = SparkSession

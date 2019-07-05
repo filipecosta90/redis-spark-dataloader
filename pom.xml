@@ -22,6 +22,7 @@
         <scala.version>2.11.12</scala.version>
         <scala.majorVersion>2.11</scala.majorVersion>
         <spark.version>2.3.1</spark.version>
+        <jedis.version>3.0.1</jedis.version>
     </properties>
 
     <dependencies>
@@ -31,7 +32,12 @@
             <version>${scala.version}</version>
         </dependency>
 
-
+<!--         https://mvnrepository.com/artifact/ch.cern.sparkmeasure/spark-measure-->
+        <dependency>
+            <groupId>ch.cern.sparkmeasure</groupId>
+            <artifactId>spark-measure_${scala.majorVersion}</artifactId>
+            <version>0.13</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -43,13 +49,36 @@
             <artifactId>spark-sql_${scala.majorVersion}</artifactId>
             <version>${spark.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>${jedis.version}</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.redislabs</groupId>
             <artifactId>spark-redis</artifactId>
             <version>2.3.1-SNAPSHOT</version>
+<!--            <scope>system</scope>-->
+<!--            <systemPath>${basedir}/lib/spark-redis-2.3.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>-->
         </dependency>
 
+
+
+        <dependency>
+        <groupId>org.apache.sql</groupId>
+        <artifactId>redis</artifactId>
+        <version>2.3.1-SNAPSHOT</version>
+        <scope>system</scope>
+        <systemPath>${basedir}/lib/spark-redis-2.3.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>
+    </dependency>
+
+
         <!-- Test -->
+
 
 
     </dependencies>
@@ -81,6 +110,52 @@
                     <scalaVersion>${scala.version}</scalaVersion>
                 </configuration>
             </plugin>
+
+            <!-- Plugin to create a single jar that includes all dependencies -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.2</version>
+                <configuration>
+
+                    <archive>
+                        <manifest>
+                            <!-- Adds the classpath to the created manifest -->
+                            <addClasspath>true</addClasspath>
+                            <!--
+                                Specifies that all dependencies of our application are found
+                                from the lib directory.
+                            -->
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>com.fcosta_oliveira.App</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+
+
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
