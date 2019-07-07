@@ -13,8 +13,8 @@ object App {
 
   def main(args: Array[String]) {
 
-  //  Logger.getLogger("org").setLevel(Level.INFO)
- //   Logger.getLogger("akka").setLevel(Level.INFO)
+    Logger.getLogger("org").setLevel(Level.INFO)
+    Logger.getLogger("akka").setLevel(Level.INFO)
 
     val tableName = "100K"
 
@@ -63,19 +63,21 @@ object App {
       df.write.format("org.apache.spark.sql.redis")
         .option("table", tableName)
         .option(SqlOptionModel, SqlOptionModelBlock)
-      //  .option(SqlOptionLogInfoVerbose, true)
+        .option(SqlOptionLogInfoVerbose, true)
         .option("model.block.size", 1000)
         .option("kryoserializer.buffer.kb", "1024")
-        .option("max.pipeline.size", 1000)
+        .option("max.pipeline.size", 2500)
         .save()
-//
-//      spark.read
-//        .format("org.apache.spark.sql.redis")
-//        .option("table", tableName)
-//        .option(SqlOptionModel, SqlOptionModelBlock)
-//        .option(SqlOptionLogInfoVerbose, true)
-//        .load().foreach { _ => }
 
+    }
+    taskMetrics.runAndMeasure {
+      spark.read
+        .format("org.apache.spark.sql.redis")
+        .option("table", tableName)
+        .option(SqlOptionModel, SqlOptionModelBlock)
+        .option(SqlOptionLogInfoVerbose, true)
+        .option("partitions.number", 12)
+        .load().foreach { _ => }
     }
 
     //  spark.stop()
